@@ -1,0 +1,16 @@
+---
+version: 3
+replicas:
+  minimum: 1
+  maximum: 1
+ingress: []
+healthecks:
+  liveness:
+    http:
+      path: "/health"
+      port: "status"
+ports:
+  - protocol: "http"
+    name: "status"
+    port: 80
+    target_port: 8080

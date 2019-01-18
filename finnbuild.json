@@ -1,0 +1,36 @@
+{
+  "links": {
+      "build": "https://travis.schibsted.io/finn/REDISBENCH",
+      "pipeline": "https://pipeline.finn.no/projects/redisbench",
+      "repository": "https://github.com/finn-no/redisbench"
+  },
+  "versions": {
+  },
+  "env": {},
+  "tasks": {
+    "default": [
+      {
+        "command": "echo 'Nothing doing'"
+      }
+    ],
+    "deploy": [
+      {
+        "command": "./deploy.sh",
+        "pipelines": [
+          {
+              "name": "redisbench",
+              "pattern": "UPLOADED DOCKER IMAGE (.+/.+:.+)",
+              "type": "docker",
+              "related-artifacts": [
+                  {
+                      "pattern": "Upload.+(https:.+/redisbench-.+fiaas\\.yml)",
+                      "type": "fiaas"
+                  }
+            ]
+          }
+        ],
+        "test-pattern": "**/target/**/TEST-*.xml"
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+language: finnbuild
+script:
+    - export RUN_FINNBUILD_AS_SUDO=false
+    - run_finnbuild  # where do we get this from??
+sudo: false
+cache:
+  directories:
+    - "$HOME/.m2"
+    - ".m2"
+after_failure:
+    - reports-publisher
+
+after_success:
+    - reports-publisher
+
+notifications:
+    webhooks:
+        - https://devhose.spt-engprod-pro.schibsted.io/devhose/travis
