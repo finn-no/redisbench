@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
@@ -16,8 +18,8 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/emicklei/glog"
 	bench "github.com/finn-no/redisbench"
-	"github.com/golang/glog"
 )
 
 var opts struct {
@@ -31,6 +33,7 @@ var opts struct {
 	cpuProfile    string
 	pipeline      int
 	poolPerClient bool
+	statusPort    int
 	end           struct {
 		rpcs int64
 		// Not yet implemented:
@@ -86,6 +89,7 @@ func init() {
 	flag.Var(&opts.methods, "methods", "Traffic mix eg GET:50,PUT:50")
 	flag.Int64Var(&opts.end.rpcs, "rpcs", 1000000, "Number of RPCs to send")
 	flag.StringVar(&opts.cpuProfile, "cpuprofile", "", "Write CPU profile to this file")
+	flag.IntVar(&opts.statusPort, "statusPort", 8080, "HTTP server port")
 }
 
 func maybeProfile() func() {
@@ -115,13 +119,48 @@ func hostPorts(hosts []string) []string {
 	return ret
 }
 
+func setLogging() {
+	output := os.Getenv("LOG_STDOUT")
+	var logWriter io.Writer
+	if strings.ToLower(output) == "true" {
+		// Buffer stdout.
+		logWriter = bufio.NewWriter(os.Stdout)
+		// Use $LOG_STDOUT as a proxy for the question, "Are
+		// we running in a container?" If so, we might not be
+		// able to write to log _files_.
+		flag.Set("logtostderr", "true")
+	} else {
+		// Don't buffer stderr.
+		logWriter = os.Stderr
+	}
+	format := os.Getenv("LOG_FORMAT")
+	if strings.ToLower(format) == "json" {
+		glog.SetLogstashWriter(logWriter)
+	}
+}
+
+func ServeHttp(port int) {
+	if port == -1 {
+		return
+	}
+
+	healthHandler := func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "ok\n")
+	}
+	http.HandleFunc("/_/health", healthHandler)
+	http.HandleFunc("/_/ready", healthHandler)
+
+	go http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+}
+
 func main() {
 	flag.Parse()
 	glog.V(1).Infof("Opts %+v", opts)
 	//	profDone := maybeProfile()
 	//	defer profDone()
 	runtime.SetMutexProfileFraction(5)
-	go http.ListenAndServe(":8888", nil)
+
+	ServeHttp(opts.statusPort)
 
 	if len(opts.addrs) < 1 {
 		fmt.Fprintf(os.Stderr, "No -addrs passed!\n\n")

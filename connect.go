@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/glog"
+	"github.com/emicklei/glog"
 	"github.com/mediocregopher/radix"
 	"golang.org/x/time/rate"
 )
